@@ -132,18 +132,21 @@ class Connection(object):
         t = self._get_table(table)
         if not isinstance(data, dict):
             raise TypeError("Must be dict-like !")
-        t, primary_key = self._check_primary(t, data)
-        s = t.delete().where(t.c[primary_key.name] == data[primary_key.name])
-        self._execute(s)
-        return data
+        t, primary_key_list = self._check_primary(t, data)
 
-    def merge(self, table, data):
-        t = self._get_table(table)
-        if not isinstance(data, dict):
-            raise TypeError("Must be dict-like !")
-        t, primary_key = self._check_primary(t, data)
-        sql = t.update().where(t.c[primary_key.name] == data[primary_key.name]).values(data)
-        self._execute(sql)
+        primary_key = []
+
+        for key, val in data.items():
+            if key not in t.c:
+                continue
+            if key in t.primary_key:
+                cond = f"{key}=:{key}"
+                primary_key.append(cond)
+
+        where = ' and '.join(primary_key)
+        s = f"delete from {t.name} where {where}"
+
+        res = self.sa_on.execute(text(s), data)
         return data
 
     def execute(self, sql, **kwargs):
@@ -153,6 +156,33 @@ class Connection(object):
         t = self._get_table(table)
         res = self._execute_many(t.insert(), data_list)
         return res.rowcount
+
+    def merge(self, table, data):
+        t = self._get_table(table)
+        if not isinstance(data, dict):
+            raise TypeError("Must be dict-like !")
+        t, primary_key_list = self._check_primary(t, data)
+
+        primary_key = []
+        columns = []
+
+        for key, val in data.items():
+            if key not in t.c:
+                continue
+            if key in t.primary_key:
+                cond = f"{key}=:{key}"
+                primary_key.append(cond)
+            else:
+                set_sql = f"{key}=:{key}"
+                columns.append(set_sql)
+
+        where = ' and '.join(primary_key)
+        value = ' set ' + ','.join(columns)
+
+        s = f"update {t.name} {value} where {where}"
+
+        res = self.sa_on.execute(text(s), data)
+        return data
 
     def merge_many(self, table, data_list):
         t = self._get_table(table)
@@ -188,12 +218,12 @@ class Connection(object):
 
     @classmethod
     def _check_primary(cls, table, data):
-
+        primary_key_list = []
         for primary_key in table.primary_key:
-            if primary_key.name in data.keys():
-                return table, primary_key
-        else:
-            raise Exception(f"Miss primary key !")
+            if primary_key.name not in data.keys():
+                raise Exception(f"The primary key is incomplete, miss {primary_key.name} !")
+            primary_key_list.append(primary_key)
+        return table, primary_key_list
 
     def _execute(self, sql, **kwargs):
         rs = self.sa_on.execute(sql, **kwargs)
