@@ -31,7 +31,9 @@ class DB(object):
     @contextmanager
     def session(self):
         work = self.connection.begin()
-        tables = MetaData(bind=self.engine, reflect=True).tables
+        meta = MetaData(bind=self.engine, )
+        meta.reflect()
+        tables = meta.tables
         try:
             connection = Connection(self.connection, tables)
             yield connection
