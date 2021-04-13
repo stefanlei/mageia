@@ -124,13 +124,14 @@ class Connection(object):
         if not isinstance(data, dict):
             raise TypeError("Must be dict-like !")
         rs = self._execute(t.insert(), **data)
-        new = dict()
+        new = Dict()
         for k, v in zip(t.primary_key, rs.inserted_primary_key):
             new[k.name] = v
         new.update(data)
         return new
 
     def delete(self, table, data):
+        data = Dict(data)
         t = self._get_table(table)
         if not isinstance(data, dict):
             raise TypeError("Must be dict-like !")
@@ -160,6 +161,7 @@ class Connection(object):
         return res.rowcount
 
     def merge(self, table, data):
+        data = Dict(data)
         t = self._get_table(table)
         if not isinstance(data, dict):
             raise TypeError("Must be dict-like !")
