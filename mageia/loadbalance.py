@@ -25,7 +25,7 @@ class WeightRandom(LoadBalance):
         for con, weight in zip(con_list, weight_list):
             for _ in range(weight):
                 v.append(con)
-        return v[random.randint(0, len(con_list) - 1)]
+        return v[random.randint(0, len(v) - 1)]
 
 
 class RoundRobin(LoadBalance):
