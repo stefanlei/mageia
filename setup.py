@@ -9,7 +9,7 @@ parse_requirements = ['SQLAlchemy==1.2.0', 'PyMySQL']
 setup(
     name=__package__,
     version=__version__,
-    description="Simple DataBase tools for MySQL",
+    description="Simple DataBase tools for MySQL . Read Write Splitting Load Balance .",
     long_description=long_description,
     long_description_content_type="text/markdown",
     license="Apache",
