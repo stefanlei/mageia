@@ -10,6 +10,8 @@ This is a simple database tools for MySQL
 - Transaction-Safe
 - Friendly interface for developer
 - Use `:param` syntax bind param
+- Read/Write Splitting
+- Load Balance
 
 ## Documentation
 
@@ -17,7 +19,7 @@ This is a simple database tools for MySQL
 pip install mageia
 ```
 
-##### Usage
+##### Usage (DB)
 
 ```python
 from mageia.db import DB, create_engine, Dict
@@ -120,8 +122,6 @@ db.execute("delete from user where id = 1")
 db.execute("update user set age = 18 where age = :age", age=16)
 ```
 
-
-
 #### Transaction-Safe
 
 You can also use `session` to keep `Transaction-Safe`
@@ -137,5 +137,115 @@ with db.session() as s:
     user.age = 18
 
     s.add("user", user)
+```
+
+---
+
+
+
+##### Usage (ProxyDB)
+
+```python
+from mageia.proxy import ProxyDB
+
+settings = {
+    "master": "mysql+pymysql://user:password@192.168.1.1/mageia?charset=utf8",
+    "slave": [
+        {
+            "url": "mysql+pymysql://user:password@192.168.1.2/mageia?charset=utf8",
+            "optional": {
+                "weight": 10
+            }
+        },
+        {
+            "url": "mysql+pymysql://user:password@192.168.1.3/mageia?charset=utf8",
+            "optional": {
+                "weight": 20
+            }
+        }
+    ],
+}
+
+db = ProxyDB(settings)
+```
+
+##### Write (master)
+
+```python
+# Use session to keep transaction-safe ,and execute in master
+with db.session() as s:
+    sql = "select * from student"
+    user = s.query_one(sql)
+
+    user.age = 18
+    s.merge("student", user)
+
+    jack = {
+        "name": "Jack",
+        "age": 23
+    }
+    s.add("student", jack)
+    
+    s.delete("student", user)
+```
+
+##### read (slave)
+
+```python
+# Use session to keep transaction-safe ,and execute in slave
+with db.session_slave() as s:
+    sql = "select * from student"
+    user = s.query_one(sql)
+    
+    user_list = s.query(sql)
+
+    user_page = s.query_page(sql, page=1, limit=10)
+```
+
+##### Auto
+
+```python
+db = ProxyDB(settings)
+
+# auto select master or slave
+
+sql = "select * from student"
+user = db.query_one(sql)
+
+Jack = {
+    "name": "Jack",
+    "age": 18
+}
+db.add("student", Jack)
+
+db.delete("student", user)
+```
+
+##### Load Balance
+
+```python
+from mageia.proxy import ProxyDB
+from mageia.loadbalance import WeightRandom
+
+settings = {
+    "master": "mysql+pymysql://user:password@192.168.1.1/mageia?charset=utf8",
+    "slave": [
+        {
+            "url": "mysql+pymysql://user:password@192.168.1.2/mageia?charset=utf8",
+            "optional": {
+                "weight": 10
+            }
+        },
+        {
+            "url": "mysql+pymysql://user:password@192.168.1.3/mageia?charset=utf8",
+            "optional": {
+                "weight": 20
+            }
+        }
+    ],
+}
+
+# Load Balance Policy
+db = ProxyDB(settings, balance_class=WeightRandom)
 ```
 
