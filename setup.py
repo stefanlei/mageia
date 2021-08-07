@@ -4,7 +4,7 @@ from mageia import __version__, __email__, __author__, __package__
 with open("README.md", 'r', encoding="utf8") as f:
     long_description = f.read()
 
-parse_requirements = ['SQLAlchemy==1.2.0', 'PyMySQL']
+parse_requirements = ['SQLAlchemy', 'PyMySQL']
 
 setup(
     name=__package__,
